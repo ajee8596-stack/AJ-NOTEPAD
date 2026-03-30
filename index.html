@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AJ Organizer</title>
+    <style>
+        :root { 
+            --leather: #6f4e37; --page: #fdf6e3; --gold: #ffd700; --neon: #00f3ff; --red: #ff1744; --green: #39ff14;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body, html { 
+            margin: 0; padding: 0; background: #000; 
+            height: 100%; width: 100vw; 
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center; /* Center PC par dikhane ke liye */
+            font-family: 'Georgia', serif; overflow: hidden;
+        }
+
+        /* --- THE LEATHER COVER (Aik Mobile-Only Container) --- */
+        .book-shell {
+            width: 90vw; max-width: 400px; /* Mobile width PC par limit karne ke liye */
+            height: 90vh; /* Portrait height PC par chota dikhane ke liye */
+            background: var(--leather);
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAALElEQVRoQ+3M4QkAIBADQWv4N+zN1ALp36/8I1wG3DscA0Tj0OAbDgw+GAwMOAAB9g7f2wE5wA4AAAAASUVORK5CYII=');
+            display: flex; flex-direction: column; 
+            padding: 5px; border: 2px solid #4a3121;
+            border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        /* Portrait Mobile optimization */
+        @media (max-width: 600px) {
+            .book-shell { width: 100vw; height: 100vh; border-radius: 0; border: none; max-width: none; }
+        }
+
+        /* --- PAGES (Strict Stacked) --- */
+        .page {
+            width: calc(100% - 10px); 
+            background: var(--page);
+            margin: 5px auto; border-radius: 4px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* TOP PAGE: Height 35% tak limited */
+        .top-page { flex: 0 0 35%; padding: 10px; text-align: center; }
+        .clock { font-size: 2.2em; font-weight: bold; color: #333; margin: 0; }
+        .date { font-size: 0.9em; color: #888; margin-bottom: 10px; }
+        
+        .calendar-grid { 
+            display: grid; grid-template-columns: repeat(7, 1fr); 
+            gap: 2px; font-size: 10px; color: #999; 
+            width: 100%; padding: 0 5px;
+        }
+        .cal-day { font-weight: bold; color: #555; padding-bottom: 2px; }
+        .cal-today { background: var(--leather); color: var(--gold); border-radius: 2px; font-weight: bold; }
+
+        /* MIDDLE BINDER (Horizontal line for portrait) */
+        .book-binder { 
+            width: 100%; height: 8px; 
+            background: rgba(0,0,0,0.3); 
+            box-shadow: inset 0 0 5px #000;
+        }
+
+        /* BOTTOM PAGE: Baqi 65% jagah */
+        .bottom-page { flex: 1; display: flex; flex-direction: column; }
+        
+        .notebook-header { 
+            padding: 8px 12px; border-bottom: 1px solid #ddd; 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #f5f5f5; 
+        }
+        .notebook-header h2 { margin: 0; font-size: 13px; color: #5d2e0a; text-transform: uppercase; }
+        
+        /* Secret [SYS] Button */
+        .syslock-btn { color: #ccc; font-size: 10px; cursor: pointer; padding: 5px; opacity: 0.5; }
+
+        #textarea-routine {
+            flex: 1; padding: 15px; border: none; resize: none; 
+            background: transparent; color: #333; font-size: 16px; line-height: 28px;
+            background-image: linear-gradient(#d5ebfe 1px, transparent 1px); background-size: 100% 28px;
+            font-family: 'Courier New', monospace; outline: none;
+        }
+
+        .footer { 
+            padding: 8px 15px; border-top: 1px solid #ddd; 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #f5f5f5; 
+        }
+        .brand { font-size: 10px; color: #aaa; font-weight: bold; }
+        .p-btn { 
+            background: var(--leather); color: var(--gold); border: 1px solid #4a3121; 
+            padding: 8px 15px; border-radius: 4px; font-weight: bold; font-size: 12px;
+        }
+
+        /* --- SECRET VAULT (Hacker Overlay) --- */
+        #vault {
+            display: none; position: absolute; top: 0; left: 0; 
+            width: 100%; height: 100%; background: #000; 
+            z-index: 1000; padding: 15px; overflow-y: auto;
+            color: var(--neon); font-family: monospace;
+        }
+        .v-head { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+        .box { aspect-ratio: 1; border: 1px solid #222; background: #080808; overflow: hidden; position: relative; }
+        .box img { width: 100%; height: 100%; object-fit: cover; }
+        .overlay { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: space-around; padding: 5px 0; }
+
+        /* SETTINGS */
+        #settings {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 85%; background: #111; border: 1px solid var(--neon); padding: 20px; border-radius: 8px;
+            z-index: 2000; text-align: center;
+        }
+        .inp { width: 100%; padding: 10px; margin: 5px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 4px; }
+
+    </style>
+</head>
+<body>
+
+<video id="cam" autoplay playsinline style="display:none;"></video>
+<canvas id="canv" style="display:none;"></canvas>
+
+<div class="book-shell">
+    <div class="page top-page">
+        <div class="clock" id="clk">00:00</div>
+        <div class="date" id="dt">Date...</div>
+        <div class="calendar-grid" id="cal">
+            <div class="cal-day">M</div><div class="cal-day">T</div><div class="cal-day">W</div><div class="cal-day">T</div><div class="cal-day">F</div><div class="cal-day">S</div><div class="cal-day">S</div>
+        </div>
+    </div>
+
+    <div class="book-binder"></div>
+    
+    <div class="page bottom-page">
+        <div class="notebook-header">
+            <h2>Daily Routine</h2>
+            <div class="syslock-btn" onclick="auth()">[SYS]</div>
+        </div>
+        <textarea id="textarea-routine" placeholder="Tap to write..."></textarea>
+        <div class="footer">
+            <span class="brand">AJ STUDIO</span>
+            <button class="p-btn" onclick="save()">SAVE</button>
+        </div>
+    </div>
+
+    <div id="vault">
+        <div class="v-head">
+            <span>CORE_VAULT</span>
+            <div>
+                <button onclick="stg()" style="background:none; border:none; color:var(--neon); font-size:18px;">⚙️</button>
+                <button onclick="location.reload()" style="background:none; border:1px solid var(--red); color:var(--red); margin-left:10px;">X</button>
+            </div>
+        </div>
+        <div id="logs" style="margin-bottom:10px;"></div>
+        <label style="display:block; border:1px dashed #444; padding:20px; text-align:center; color:var(--green); margin-bottom:15px; border-radius:8px;">
+            + HIDE MEDIA
+            <input type="file" multiple onchange="addFile(this.files)" style="display:none;">
+        </label>
+        <div class="grid" id="g-grid"></div>
+    </div>
+</div>
+
+<div id="settings">
+    <h4 style="color:var(--neon); margin-top:0;">CHANGE KEY</h4>
+    <input type="text" id="o-p" class="inp" placeholder="Old Key">
+    <input type="text" id="n-p" class="inp" placeholder="New Key">
+    <button class="p-btn" style="width:100%;" onclick="updK()">UPDATE</button>
+    <button onclick="stg()" style="background:none; border:none; color:#555; margin-top:10px;">Cancel</button>
+</div>
+
+<script>
+    let KEY = localStorage.getItem('v_k') || "AJ1996";
+    let db;
+
+    // --- CLOCK & CALENDAR ---
+    function tick() {
+        const n = new Date();
+        document.getElementById('clk').innerText = n.getHours().toString().padStart(2,'0') + ":" + n.getMinutes().toString().padStart(2,'0');
+        document.getElementById('dt').innerText = n.toLocaleDateString([], {weekday:'long', month:'short', day:'numeric'});
+    }
+    tick(); setInterval(tick, 1000);
+
+    const g = document.getElementById('cal');
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+    const last = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    let start = (first === 0) ? 6 : first - 1;
+    for(let i=0; i<start; i++) g.appendChild(document.createElement('div'));
+    for(let i=1; i<=last; i++) {
+        const d = document.createElement('div'); d.innerText = i;
+        if(i === now.getDate()) d.classList.add('cal-today');
+        g.appendChild(d);
+    }
+
+    // --- LOGIC ---
+    document.getElementById('textarea-routine').value = localStorage.getItem('diary') || "";
+    function save() { localStorage.setItem('diary', document.getElementById('textarea-routine').value); alert("Saved!"); }
+
+    async function initC() { try { const s = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}}); document.getElementById('cam').srcObject=s; } catch(e){} }
+    document.body.addEventListener('touchstart', initC, {once:true});
+
+    function auth() {
+        const p = prompt("Access Code:");
+        if(p === KEY) { document.getElementById('vault').style.display="block"; loadG(); }
+        else if(p !== null) { snap(); alert("Denied."); }
+    }
+
+    function snap() {
+        const v = document.getElementById('cam'); const c = document.getElementById('canv');
+        if(!v.srcObject) return;
+        c.width=v.videoWidth; c.height=v.videoHeight;
+        c.getContext('2d').drawImage(v,0,0);
+        let l = JSON.parse(localStorage.getItem('tr')||"[]");
+        l.push(c.toDataURL('image/jpeg',0.3)); if(l.length>6) l.shift();
+        localStorage.setItem('tr', JSON.stringify(l));
+    }
+
+    const req = indexedDB.open("AJ_Final_Port", 1);
+    req.onupgradeneeded = (e) => e.target.result.createObjectStore("g", {autoIncrement:true});
+    req.onsuccess = (e) => db = e.target.result;
+
+    function addFile(fs) {
+        for(let f of fs) {
+            const r = new FileReader();
+            r.onload = (e) => {
+                const tx = db.transaction("g","readwrite");
+                tx.objectStore("g").add({d:e.target.result, t:f.type});
+                tx.oncomplete = () => loadG();
+            };
+            r.readAsDataURL(f);
+        }
+    }
+
+    function loadG() {
+        const grid = document.getElementById('g-grid'); grid.innerHTML = "";
+        const logs = document.getElementById('logs');
+        let tr = JSON.parse(localStorage.getItem('tr')||"[]");
+        if(tr.length>0) logs.innerHTML = `<div style="border:1px solid red; padding:5px;"><small>INTRUDERS</small><div class="grid">${tr.map(i=>`<img src="${i}" style="width:100%">`).join('')}</div></div>`;
+        
+        db.transaction("g").objectStore("g").openCursor().onsuccess = (e) => {
+            const c = e.target.result;
+            if(c) {
+                grid.innerHTML += `<div class="box"><img src="${c.value.d}"><div class="overlay"><button onclick="del(${c.key})" style="color:red; background:none; border:none;">🗑️</button></div></div>`;
+                c.continue();
+            }
+        };
+    }
+    function del(id) { if(confirm("Delete?")) db.transaction("g","readwrite").objectStore("g").delete(id).onsuccess=()=>loadG(); }
+    function stg() { const s = document.getElementById('settings'); s.style.display = (s.style.display==='block')?'none':'block'; }
+    function updK() {
+        const o = document.getElementById('o-p').value; const n = document.getElementById('n-p').value;
+        if(o===KEY && n.length>2) { localStorage.setItem('v_k',n); KEY=n; alert("Updated!"); stg(); }
+        else alert("Invalid.");
+    }
+</script>
+</body>
+</html>
